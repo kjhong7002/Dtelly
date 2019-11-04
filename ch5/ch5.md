@@ -199,3 +199,60 @@ GET /apache-web-log/_search?size=0
     }
 }
 ```
+
+기존 날짜 값에 3시간 더해서 집계
+일자별 집계일 경우 3시부터 집계가 시작되도록 변경
+
+```
+GET /apache-web-log/_search?size=0
+{
+    "aggs" : {
+        "daily_request_count" : {
+            "date_histogram": {
+              "field": "timestamp",
+              "interval": "day",
+              "offset": "+3h"
+            }
+        }
+    }
+}
+```
+
+## 5.3.3 텀즈 집계
+
++ 지정한 필드에 대해 빈도가 높은 Term의 순위 반환 (근사치를 계산)
+
+아파치 서버 요청량 국가별 순위 집계
+doc_count_error_upper_bound은 오류의 상한선
+sum_other_doc_count는 반환된 결과에 포함되지 않은 집계결과 (기본값 size 10, 10등까지 반환)
+
+```
+GET /apache-web-log/_search?size=0
+{
+  "aggs" : {
+    "request count by country" : {
+      "terms" : {
+        "field" : "geoip.country_name.keyword"
+      }
+    }
+  }
+}
+```
+
+각 샤드별로 상위 size개 만큼 반환 후 병합하므로 정확하지 않은 결과 반환할 수 있음
+
+size 값을 100으로 변경 후 질의
+
+```
+GET /apache-web-log/_search?size=0
+{
+  "aggs" : {
+    "request count by country" : {
+      "terms" : {
+        "field" : "geoip.country_name.keyword",
+        "size": 100
+      }
+    }
+  }
+}
+```
