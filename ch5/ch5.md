@@ -298,3 +298,104 @@ GET /apache-web-log/_search?size=0
   }
 }
 ```
+histo 버킷의 bytes_sum 버킷을 참조 (histo>bytes_sum)
+
+
+최대/최소/평균/통계/확장통계/백분위수/이동평균(안됨) 버킷 집계
+
+```
+GET /apache-web-log/_search?size=0
+{
+  "aggs": {
+    "histo": {
+      "date_histogram": {
+        "field": "timestamp",
+        "interval": "minute"
+      },
+      "aggs": {
+        "bytes_sum": {
+          "sum": {
+            "field": "bytes"
+          }
+        }
+      }
+    },
+    "max_bytes": {
+      "max_bucket": {
+        "buckets_path": "histo>bytes_sum"
+      }
+    },
+    "min_bytes": {
+      "min_bucket": {
+        "buckets_path": "histo>bytes_sum"
+      }
+    },
+    "avg_bytes": {
+      "avg_bucket": {
+        "buckets_path": "histo>bytes_sum"
+      }
+    },
+    "bytes_stats": {
+      "stats_bucket": {
+        "buckets_path": "histo>bytes_sum"
+      }
+    },
+    "extend_stats": {
+      "extended_stats_bucket": {
+        "buckets_path": "histo>bytes_sum"
+      }
+    },
+    "percentiles_bytes": {
+      "percentiles_bucket": {
+        "buckets_path": "histo>bytes_sum"
+      }
+    }
+  }
+}
+```
+
+## 5.4.2 부모 집계
+
++ 집계를 통해 생성된 버킷을 사용해 계산을 수행하고, 그 결과를 기존 집계에 반영
+
+데이터가 존재하지 않는 부분을 갭 gap 이라 부름
+
++ 갭 발생 이유
+    + 어느 하나의 버킷 안으로 포함되는 문서들에 요청된 필드가 포함되지 않은 경우
+    + 하나 이상의 버킷에 대한 쿼리와 일치하는 문서가 존재하지 않는 경우
+    + 다른 종속된 버킷에 값이 누락되어 계산된 메트릭이 값을 생성할 수 없는 경우
+    
++ 갭 정책(gap_policy)
+    + skip: 누락된 데이터를 버킷이 존재하지 않는 것으로 간주
+    + insert_zero: 누락된 값을 0으로 대체하며 파이프라인 집계 계산은 정상적으로 진행
+    
+아파치 웹 로그를 통해 수집된 데이터가 시간이 지남에 따른 변경폭 추이 확인
+
+```
+GET /apache-web-log/_search?size=0
+{
+  "aggs": {
+    "histo": {
+      "date_histogram": {
+        "field": "timestamp",
+        "interval": "day"
+      },
+      "aggs": {
+        "bytes_sum": {
+          "sum": {
+            "field": "bytes"
+          }
+        },
+        "sum_deriv": {
+          "derivative": {
+            "buckets_path": "bytes_sum"
+          }
+        }
+      }
+    }
+  }
+}
+```
+버킷의 현재 집계 값에서 이전 집계 값을 뺌 
+788636158 - 414259902 = 374376256 
+
