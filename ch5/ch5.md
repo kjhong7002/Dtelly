@@ -382,4 +382,67 @@ GET /apache-web-log/_search?size=0
 버킷의 현재 집계 값에서 이전 집계 값을 뺌 
 788636158 - 414259902 = 374376256 
 
++ 파생/누적/버킷스크립트/버킷셀렉터/시계열 차분 집계
+```
+GET /apache-web-log/_search?size=0
+{
+  "aggs": {
+    "histo": {
+      "date_histogram": {
+        "field": "timestamp",
+        "interval": "day"
+      },
+      "aggs": {
+        "bytes_sum": {
+          "sum": {
+            "field": "bytes"
+          }
+        },
+        "total_count": {
+          "value_count": {
+            "field": "bytes"
+          }
+        },
+        "sum_deriv": {
+          "derivative": {
+            "buckets_path": "bytes_sum"
+          }
+        },
+        "cum_deriv": {
+          "cumulative_sum": {
+            "buckets_path": "bytes_sum"
+          }
+        },
+        "b_script": {
+          "bucket_script": {
+            "buckets_path": { 
+              "my_var1": "bytes_sum",
+              "my_var2": "total_count"
+            },
+            "script":"params.my_var1 / params.my_var2"
+          }
+        },
+        "b_selector": {
+          "bucket_selector": {
+            "buckets_path": { 
+              "my_var1": "bytes_sum",
+              "my_var2": "total_count"
+            },
+            "script":"params.my_var1 > params.my_var2"
+          }
+        },
+        "s_diff": {
+          "serial_diff": {
+            "buckets_path": "bytes_sum",
+            "lag": 1
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+# 5.5 근사값으로 제공되는 집계 연산
+
 
