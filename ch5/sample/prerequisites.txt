@@ -1,0 +1,19 @@
+PUT _snapshot/apache-web-log
+{
+  "type": "fs",
+  "settings": {
+    "location": "/usr/share/elasticsearch/agg_example",
+    "compress": true
+  }
+}
+
+GET _snapshot/apache-web-log/_all
+
+POST _snapshot/apache-web-log/default/_restore
+
+GET /apache-web-log/_search
+{
+  "query": {
+    "match_all": {}
+  }
+}
