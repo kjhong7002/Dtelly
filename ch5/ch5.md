@@ -1,3 +1,5 @@
+# 5.3 버킷 집계
+
 ## 5.3.1 범위 집계
 
 + 사용자가 지정한 범위 내 집계 수행.
@@ -251,6 +253,46 @@ GET /apache-web-log/_search?size=0
       "terms" : {
         "field" : "geoip.country_name.keyword",
         "size": 100
+      }
+    }
+  }
+}
+```
+
+* 집계와 샤드 크기
+텀즈 집계 시 정확히 size의 크기만큼이 아닌 경험적인 방법(샤드 크기 * 1.5 + 10)을 사용해 내부적으로 집계를 수행하는데, shard_size 속성을 사용해 각 샤드에서 집계할 크기를 직접 지정해서 불필요한 연산 줄이는 것도 가능함
+
+# 5.4 파이프라인 집계
+
+다른 집계로 생성된 버킷을 참조해서 집계 수행
+집계 또는 중첩된 집계를 통해 생성된 버킷을 사용해 추가적인 계산 수행
+
+## 5.4.1 형제 집계
+
++ 동일 선상의 위치에서 수행되는 새 집계
+
+아파치 웹 로그에서 분 단위로 합산된 데이터 중 가장 큰 데이터량
+
+```
+GET /apache-web-log/_search?size=0
+{
+  "aggs": {
+    "histo": {
+      "date_histogram": {
+        "field": "timestamp",
+        "interval": "minute"
+      },
+      "aggs": {
+        "bytes_sum": {
+          "sum": {
+            "field": "bytes"
+          }
+        }
+      }
+    },
+    "max_bytes": {
+      "max_bucket": {
+        "buckets_path": "histo>bytes_sum"
       }
     }
   }
